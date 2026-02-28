@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sliding Puzzle</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="user-info" id="userInfo">Player</div>
+      <div class="stats">
+        <span>Moves: <span id="moveCount">0</span></span>
+        <span>Time: <span id="timeCount">0s</span></span>
+      </div>
+    </header>
+
+    <div class="controls">
+      <select id="difficultySelect" onchange="setDifficulty(parseInt(this.value))">
+        <option value="3">3x3</option>
+        <option value="4" selected>4x4</option>
+        <option value="5">5x5</option>
+      </select>
+      <button id="previewBtn" onmousedown="showPreview()" onmouseup="hidePreview()" ontouchstart="showPreview()" ontouchend="hidePreview()">Preview</button>
+      <button onclick="initGame()">Restart</button>
+    </div>
+
+    <div id="gameBoard" class="board"></div>
+
+    <div class="image-picker">
+      <h3>Choose Image</h3>
+      <div class="image-grid" id="imageGrid">
+        <label class="upload-tile">
+          <span>+ Upload</span>
+          <input type="file" id="uploadInput" accept="image/*" onchange="processUploadedImage(this)">
+        </label>
+        <!-- Default images will be injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="modal-overlay hidden">
+    <div class="spinner"></div>
+    <p>Processing...</p>
+  </div>
+
+  <!-- Preview Modal for Upload -->
+  <div id="uploadPreviewModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3>Adjust Image</h3>
+      <div class="preview-container">
+        <canvas id="previewCanvas" width="1000" height="1000"></canvas>
+      </div>
+      <p id="blurWarning" class="warning hidden">Small image may look blurry.</p>
+      <div class="modal-buttons">
+        <button onclick="rotatePreview()">Rotate 90°</button>
+        <button onclick="confirmUpload()">Use this image</button>
+        <button onclick="hideModal('uploadPreviewModal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Win Modal -->
+  <div id="winModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2>You Win!</h2>
+      <p>Difficulty: <span id="winDifficulty"></span></p>
+      <p>Moves: <span id="winMoves"></span></p>
+      <p>Time: <span id="winTime"></span>s</p>
+      <div class="modal-buttons">
+        <button onclick="initGame(); hideModal('winModal')">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Image Preview Overlay -->
+  <div id="fullPreviewOverlay" class="full-preview hidden">
+    <div id="fullPreviewImage"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
