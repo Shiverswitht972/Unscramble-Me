@@ -5,8 +5,14 @@
   --button-color: #3390ec;
   --button-text-color: #ffffff;
   --secondary-bg-color: #f4f4f5;
-  
-  --board-size: 320px;
+
+  /* ✅ Responsive board size:
+     - never wider than screen (92vw)
+     - never taller than ~half viewport (52vh)
+     - never larger than 420px
+  */
+  --board-size: min(92vw, 52vh, 420px);
+
   --tile-gap: 2px;
 }
 
@@ -17,8 +23,14 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html,
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   overscroll-behavior: none;
@@ -29,10 +41,27 @@ body {
   max-width: 500px;
   margin: 0 auto;
   padding: 16px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 100vh;
+
+  /* ✅ Telegram/iOS safe viewport height */
+  min-height: 100dvh;
+
+  /* ✅ If content is taller than screen, allow scroll instead of hiding controls */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* Optional: makes scroll feel nicer */
+  gap: 12px;
+}
+
+/* Fallback if dvh isn't supported */
+@supports not (height: 100dvh) {
+  #app {
+    min-height: 100vh;
+  }
 }
 
 header {
@@ -40,10 +69,11 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   padding: 10px;
   background: var(--secondary-bg-color);
   border-radius: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
 }
 
 .user-info {
@@ -61,10 +91,16 @@ header {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 20px;
+
+  /* slightly tighter spacing so controls stay visible */
+  margin-bottom: 8px;
+
+  /* keep controls from shrinking weirdly */
+  flex-wrap: wrap;
 }
 
-button, select {
+button,
+select {
   background-color: var(--button-color);
   color: var(--button-text-color);
   border: none;
@@ -87,8 +123,14 @@ button:active {
   position: relative;
   border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 24px;
+
+  /* tighter so the picker + restart don't get pushed away */
+  margin-bottom: 8px;
+
   touch-action: none;
+
+  /* ✅ Prevent board from shrinking if container is tight */
+  flex: 0 0 auto;
 }
 
 .tile {
@@ -112,7 +154,10 @@ button:active {
 
 .image-picker {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 4px;
+
+  /* ✅ keep it from getting squashed */
+  flex: 0 0 auto;
 }
 
 .image-picker h3 {
@@ -185,7 +230,8 @@ button:active {
   max-width: 320px;
 }
 
-.modal-content h2, .modal-content h3 {
+.modal-content h2,
+.modal-content h3 {
   margin-bottom: 16px;
 }
 
@@ -222,7 +268,9 @@ button:active {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .warning {
