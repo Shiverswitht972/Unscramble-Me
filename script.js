@@ -6,12 +6,11 @@ const state = {
   timer: 0,
   timerInterval: null,
   isPlaying: false,
-  imageSrc: null,
+  imageSrc: null, 
   tileSize: 0,
-  boardPixelSize: 0,
   isProcessing: false,
   uploadRotation: 0,
-  tempImage: null,
+  tempImage: null, 
   defaultImages: [
     'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
     'https://images.unsplash.com/photo-1517849845537-4d257902454a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
@@ -25,23 +24,17 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   initTelegram();
   initUI();
-
   const img = new Image();
   img.crossOrigin = "Anonymous";
   img.onload = () => { setImageSource(img); };
   img.src = state.defaultImages[0];
-
-  // ✅ Keep board + background math correct on Telegram resize/orientation changes
-  window.addEventListener('resize', () => {
-    if (state.board.length) generateTileRenderData();
-  });
 });
 
 function initTelegram() {
   if (window.Telegram && Telegram.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
-
+    
     const themeParams = Telegram.WebApp.themeParams;
     const root = document.documentElement;
     if (themeParams.bg_color) root.style.setProperty('--bg-color', themeParams.bg_color);
@@ -63,7 +56,7 @@ function initTelegram() {
 }
 
 function initUI() {
- const grid = document.getElementById('thumbnailMount');
+  const grid = document.getElementById('imageGrid');
   state.defaultImages.forEach((src, idx) => {
     const div = document.createElement('div');
     div.className = `thumbnail ${idx === 0 ? 'selected' : ''}`;
@@ -87,18 +80,18 @@ function initGame() {
   clearInterval(state.timerInterval);
   document.getElementById('moveCount').textContent = state.moves;
   document.getElementById('timeCount').textContent = '0s';
-
+  
   if (window.Telegram && Telegram.WebApp) {
     Telegram.WebApp.MainButton.setText('RESTART');
   }
 
   const n = state.n;
   const total = n * n;
-  state.solvedBoard = Array.from({ length: total - 1 }, (_, i) => i + 1);
-  state.solvedBoard.push(0);
-
+  state.solvedBoard = Array.from({length: total - 1}, (_, i) => i + 1);
+  state.solvedBoard.push(0); 
+  
   state.board = [...state.solvedBoard];
-
+  
   shuffleBoard();
   generateTileRenderData();
 }
@@ -113,14 +106,14 @@ function setImageSource(img) {
   canvas.width = 1000;
   canvas.height = 1000;
   const ctx = canvas.getContext('2d');
-
+  
   const side = Math.min(img.width, img.height);
   const sx = (img.width - side) / 2;
   const sy = (img.height - side) / 2;
-
+  
   ctx.drawImage(img, sx, sy, side, side, 0, 0, 1000, 1000);
   state.imageSrc = canvas.toDataURL('image/jpeg', 0.8);
-
+  
   document.getElementById('fullPreviewImage').style.backgroundImage = `url(${state.imageSrc})`;
   initGame();
 }
@@ -142,19 +135,18 @@ function processUploadedImage(input) {
 
   const objectUrl = URL.createObjectURL(file);
   const img = new Image();
-
   img.onload = () => {
     state.tempImage = img;
     state.uploadRotation = 0;
-
+    
     if (Math.min(img.width, img.height) < 500) {
       document.getElementById('blurWarning').classList.remove('hidden');
     } else {
       document.getElementById('blurWarning').classList.add('hidden');
     }
-
+    
     normalizeToSquareCanvas(state.tempImage, state.uploadRotation);
-
+    
     hideModal('loadingOverlay');
     showModal('uploadPreviewModal');
     input.disabled = false;
@@ -162,26 +154,18 @@ function processUploadedImage(input) {
     URL.revokeObjectURL(objectUrl);
     state.isProcessing = false;
   };
-
   img.onerror = () => {
     alert("Failed to load image.");
     hideModal('loadingOverlay');
     input.disabled = false;
     state.isProcessing = false;
-    URL.revokeObjectURL(objectUrl);
   };
-
   img.src = objectUrl;
 }
 
 function normalizeToSquareCanvas(img, rotationDegrees) {
   const canvas = document.getElementById('previewCanvas');
   const ctx = canvas.getContext('2d');
-
-  // Ensure internal resolution is correct
-  canvas.width = 1000;
-  canvas.height = 1000;
-
   ctx.clearRect(0, 0, 1000, 1000);
 
   const side = Math.min(img.width, img.height);
@@ -191,10 +175,15 @@ function normalizeToSquareCanvas(img, rotationDegrees) {
   ctx.save();
   ctx.translate(500, 500);
   ctx.rotate((rotationDegrees * Math.PI) / 180);
-
-  // Center-crop square then draw to 1000x1000
-  ctx.drawImage(img, sx, sy, side, side, -500, -500, 1000, 1000);
-
+  
+  if (rotationDegrees % 180 !== 0) {
+    const s = Math.min(img.width, img.height);
+    const tsx = (img.width - s) / 2;
+    const tsy = (img.height - s) / 2;
+    ctx.drawImage(img, tsx, tsy, s, s, -500, -500, 1000, 1000);
+  } else {
+    ctx.drawImage(img, sx, sy, side, side, -500, -500, 1000, 1000);
+  }
   ctx.restore();
 }
 
@@ -207,115 +196,97 @@ function confirmUpload() {
   const canvas = document.getElementById('previewCanvas');
   state.imageSrc = canvas.toDataURL('image/jpeg', 0.8);
   document.getElementById('fullPreviewImage').style.backgroundImage = `url(${state.imageSrc})`;
-
+  
   document.querySelectorAll('.thumbnail').forEach(el => el.classList.remove('selected'));
-
+  
   hideModal('uploadPreviewModal');
   initGame();
 }
 
-// ✅ True solvable shuffle via random valid moves from solved
+// True Solvable Shuffle using Valid Moves
 function shuffleBoard() {
   const n = state.n;
   const total = n * n;
   let emptyIdx = total - 1;
-  const shuffles = 450; // solid shuffle count
-
-  let lastEmpty = -1;
+  const shuffles = n * n * 30; // Random valid moves for true solvable shuffle
+  
+  let lastMove = -1;
   for (let i = 0; i < shuffles; i++) {
-    const candidates = [];
+    const moves = [];
     const row = Math.floor(emptyIdx / n);
     const col = emptyIdx % n;
-
-    const up = emptyIdx - n;
-    const down = emptyIdx + n;
-    const left = emptyIdx - 1;
-    const right = emptyIdx + 1;
-
-    if (row > 0 && up !== lastEmpty) candidates.push(up);
-    if (row < n - 1 && down !== lastEmpty) candidates.push(down);
-    if (col > 0 && left !== lastEmpty) candidates.push(left);
-    if (col < n - 1 && right !== lastEmpty) candidates.push(right);
-
-    const nextIdx = candidates[Math.floor(Math.random() * candidates.length)];
-
+    
+    if (row > 0 && lastMove !== emptyIdx - n) moves.push(emptyIdx - n); 
+    if (row < n - 1 && lastMove !== emptyIdx + n) moves.push(emptyIdx + n); 
+    if (col > 0 && lastMove !== emptyIdx - 1) moves.push(emptyIdx - 1); 
+    if (col < n - 1 && lastMove !== emptyIdx + 1) moves.push(emptyIdx + 1); 
+    
+    const nextIdx = moves[Math.floor(Math.random() * moves.length)];
+    
     state.board[emptyIdx] = state.board[nextIdx];
     state.board[nextIdx] = 0;
-
-    lastEmpty = emptyIdx;
+    lastMove = emptyIdx;
     emptyIdx = nextIdx;
   }
 }
 
-/**
- * ✅ KEY FIX:
- * Uses the actual rendered board width (responsive) instead of hardcoded 320
- * so tiles + background always align and controls don’t get “covered”.
- */
 function generateTileRenderData() {
   const boardEl = document.getElementById('gameBoard');
   boardEl.innerHTML = '';
-
+  
   const n = state.n;
-  const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-gap')) || 2;
-
-  // ✅ real board size from CSS layout
-  const rect = boardEl.getBoundingClientRect();
-  const boardSize = Math.floor(rect.width);
-  state.boardPixelSize = boardSize;
-
+  const gap = 2;
+  const boardSize = 320;
   const tileSize = (boardSize - gap * (n - 1)) / n;
   state.tileSize = tileSize;
 
   for (let i = 0; i < state.board.length; i++) {
     const tileVal = state.board[i];
     const tileEl = document.createElement('div');
-
     tileEl.id = `tile-${tileVal}`;
     tileEl.className = `tile ${tileVal === 0 ? 'empty' : ''}`;
     tileEl.style.width = `${tileSize}px`;
     tileEl.style.height = `${tileSize}px`;
-
+    
     if (tileVal !== 0 && state.imageSrc) {
       const solvedIdx = state.solvedBoard.indexOf(tileVal);
       const sRow = Math.floor(solvedIdx / n);
       const sCol = solvedIdx % n;
-
+      
       tileEl.style.backgroundImage = `url(${state.imageSrc})`;
-      tileEl.style.backgroundRepeat = 'no-repeat';
       tileEl.style.backgroundSize = `${boardSize}px ${boardSize}px`;
-
+      
       const bgX = -(sCol * (tileSize + gap));
       const bgY = -(sRow * (tileSize + gap));
       tileEl.style.backgroundPosition = `${bgX}px ${bgY}px`;
-
-      tileEl.textContent = '';
+      tileEl.textContent = ''; 
     } else {
       tileEl.textContent = tileVal !== 0 ? tileVal : '';
     }
 
+    tileEl.onclick = () => moveTile(i);
     boardEl.appendChild(tileEl);
   }
-
+  
   updateTilePositions();
 }
 
 function updateTilePositions() {
   const n = state.n;
-  const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-gap')) || 2;
+  const gap = 2;
   const tileSize = state.tileSize;
 
   for (let i = 0; i < state.board.length; i++) {
     const tileVal = state.board[i];
     const tileEl = document.getElementById(`tile-${tileVal}`);
     if (!tileEl) continue;
-
+    
     const row = Math.floor(i / n);
     const col = i % n;
-
+    
     const x = col * (tileSize + gap);
     const y = row * (tileSize + gap);
-
+    
     tileEl.style.transform = `translate(${x}px, ${y}px)`;
     tileEl.onclick = () => moveTile(i);
   }
@@ -324,18 +295,18 @@ function updateTilePositions() {
 function canMove(index) {
   const n = state.n;
   const emptyIdx = state.board.indexOf(0);
-
+  
   const r1 = Math.floor(index / n);
   const c1 = index % n;
   const r2 = Math.floor(emptyIdx / n);
   const c2 = emptyIdx % n;
-
+  
   return (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
 }
 
 function moveTile(index) {
   if (!canMove(index)) return;
-
+  
   if (!state.isPlaying) {
     state.isPlaying = true;
     state.timerInterval = setInterval(() => {
@@ -345,13 +316,13 @@ function moveTile(index) {
   }
 
   const emptyIdx = state.board.indexOf(0);
-
+  
   state.board[emptyIdx] = state.board[index];
   state.board[index] = 0;
-
+  
   state.moves++;
   document.getElementById('moveCount').textContent = state.moves;
-
+  
   if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
     Telegram.WebApp.HapticFeedback.impactOccurred('light');
   }
@@ -362,46 +333,32 @@ function moveTile(index) {
 
 function checkWin() {
   const isWin = state.board.every((val, index) => val === state.solvedBoard[index]);
-  if (!isWin) return;
-
-  clearInterval(state.timerInterval);
-  state.isPlaying = false;
-
-  document.getElementById('winDifficulty').textContent = `${state.n}x${state.n}`;
-  document.getElementById('winMoves').textContent = state.moves;
-  document.getElementById('winTime').textContent = state.timer;
-
-  if (window.Telegram && Telegram.WebApp) {
-    Telegram.WebApp.MainButton.setText('SHARE SCORE');
-    Telegram.WebApp.MainButton.offClick?.(); // safe if supported
-    Telegram.WebApp.MainButton.onClick(() => {
-      Telegram.WebApp.switchInlineQuery(
-        `I solved Unscramble Me (${state.n}x${state.n}) in ${state.moves} moves and ${state.timer}s!`
-      );
-    });
+  if (isWin) {
+    clearInterval(state.timerInterval);
+    state.isPlaying = false;
+    
+    document.getElementById('winDifficulty').textContent = `${state.n}x${state.n}`;
+    document.getElementById('winMoves').textContent = state.moves;
+    document.getElementById('winTime').textContent = state.timer;
+    
+    if (window.Telegram && Telegram.WebApp) {
+      Telegram.WebApp.MainButton.setText('SHARE SCORE');
+      Telegram.WebApp.MainButton.onClick(() => {
+        Telegram.WebApp.switchInlineQuery(`I solved the ${state.n}x${state.n} puzzle in ${state.moves} moves and ${state.timer}s!`);
+      });
+    }
+    
+    setTimeout(() => {
+      showModal('winModal');
+      shootConfetti();
+    }, 300);
   }
-
-  setTimeout(() => {
-    showModal('winModal');
-    shootConfetti();
-  }, 250);
 }
 
-function showPreview() {
-  document.getElementById('fullPreviewOverlay').classList.remove('hidden');
-}
-
-function hidePreview() {
-  document.getElementById('fullPreviewOverlay').classList.add('hidden');
-}
-
-function showModal(id) {
-  document.getElementById(id).classList.remove('hidden');
-}
-
-function hideModal(id) {
-  document.getElementById(id).classList.add('hidden');
-}
+function showPreview() { document.getElementById('fullPreviewOverlay').classList.remove('hidden'); }
+function hidePreview() { document.getElementById('fullPreviewOverlay').classList.add('hidden'); }
+function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 function shootConfetti() {
   const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff'];
@@ -417,17 +374,16 @@ function shootConfetti() {
     conf.style.transition = 'all 1s ease-out';
     conf.style.transform = `translate(-50%, -50%)`;
     document.body.appendChild(conf);
-
+    
     setTimeout(() => {
       const angle = Math.random() * Math.PI * 2;
       const velocity = 100 + Math.random() * 200;
       const tx = Math.cos(angle) * velocity;
-      const ty = Math.sin(angle) * velocity + 200;
+      const ty = Math.sin(angle) * velocity + 200; 
       conf.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) rotate(${Math.random() * 360}deg)`;
       conf.style.opacity = '0';
     }, 10);
-
-    setTimeout(() => conf.remove(), 1000);
+    
+    setTimeout(() => { conf.remove(); }, 1000);
   }
 }
-
