@@ -63,7 +63,7 @@ function initTelegram() {
 }
 
 function initUI() {
-  const grid = document.getElementById('imageGrid');
+ const grid = document.getElementById('thumbnailMount');
   state.defaultImages.forEach((src, idx) => {
     const div = document.createElement('div');
     div.className = `thumbnail ${idx === 0 ? 'selected' : ''}`;
@@ -430,3 +430,4 @@ function shootConfetti() {
     setTimeout(() => conf.remove(), 1000);
   }
 }
+
