@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
-  <title>Unscramble Me</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sliding Puzzle</title>
+  <link rel="stylesheet" href="styles.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -21,58 +18,33 @@
     </header>
 
     <div class="controls">
-      <select id="difficultySelect" onchange="setDifficulty(parseInt(this.value, 10))">
+      <select id="difficultySelect" onchange="setDifficulty(parseInt(this.value))">
         <option value="3">3x3</option>
         <option value="4" selected>4x4</option>
         <option value="5">5x5</option>
       </select>
-
-      <!-- ✅ Pointer events are more reliable than mixing mouse/touch -->
-      <button
-        id="previewBtn"
-        onpointerdown="showPreview()"
-        onpointerup="hidePreview()"
-        onpointercancel="hidePreview()"
-        onpointerleave="hidePreview()"
-      >
-        Preview
-      </button>
-
-      <button type="button" onclick="initGame()">Restart</button>
+      <button id="previewBtn" onmousedown="showPreview()" onmouseup="hidePreview()" ontouchstart="showPreview()" ontouchend="hidePreview()">Preview</button>
+      <button onclick="initGame()">Restart</button>
     </div>
 
-    <!-- ✅ Must match JS: gameBoard -->
-    <div id="gameBoard" class="board"></div>
-
-    <div class="image-picker">
-      <h3>Choose Image</h3>
-
-      <!-- ✅ Keep upload tile separate so thumbnails inject cleanly -->
-      <div class="image-grid" id="imageGrid">
-        <label class="upload-tile" for="uploadInput">
-          <span>+ Upload</span>
-        </label>
-
-        <!-- Thumbnails injected here -->
-        <div id="thumbnailMount" style="display: contents;"></div>
+       <div class="board-wrapper">
+      <div id="gameBoard" class="board"></div>
+      <!-- Full Image Preview Overlay -->
+      <div id="fullPreviewOverlay" class="full-preview hidden">
+        <div id="fullPreviewImage"></div>
       </div>
-
-      <input
-        type="file"
-        id="uploadInput"
-        accept="image/*"
-        onchange="processUploadedImage(this)"
-        style="display:none;"
-      />
+    </div> 
+          <input type="file" id="uploadInput" accept="image/*" onchange="processUploadedImage(this)">
+        </label>
+        <!-- Default images will be injected here -->
+      </div>
     </div>
   </div>
 
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="modal-overlay hidden">
-    <div class="modal-content" style="max-width: 260px;">
-      <div class="spinner"></div>
-      <p>Processing...</p>
-    </div>
+    <div class="spinner"></div>
+    <p>Processing...</p>
   </div>
 
   <!-- Preview Modal for Upload -->
@@ -84,9 +56,9 @@
       </div>
       <p id="blurWarning" class="warning hidden">Small image may look blurry.</p>
       <div class="modal-buttons">
-        <button type="button" onclick="rotatePreview()">Rotate 90°</button>
-        <button type="button" onclick="confirmUpload()">Use this image</button>
-        <button type="button" onclick="hideModal('uploadPreviewModal')">Cancel</button>
+        <button onclick="rotatePreview()">Rotate 90°</button>
+        <button onclick="confirmUpload()">Use this image</button>
+        <button onclick="hideModal('uploadPreviewModal')">Cancel</button>
       </div>
     </div>
   </div>
@@ -99,7 +71,7 @@
       <p>Moves: <span id="winMoves"></span></p>
       <p>Time: <span id="winTime"></span>s</p>
       <div class="modal-buttons">
-        <button type="button" onclick="initGame(); hideModal('winModal')">Play Again</button>
+        <button onclick="initGame(); hideModal('winModal')">Play Again</button>
       </div>
     </div>
   </div>
