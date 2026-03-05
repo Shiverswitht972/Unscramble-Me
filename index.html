@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0c0c11" />
+  <title>Slide Puzzle</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+
+  <!-- Telegram WebApp SDK (must load before script.js) -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ================================================
+       OVERLAYS
+       ================================================ -->
+
+  <!-- Loading spinner (image processing) -->
+  <div id="overlay-loading" class="overlay hidden" aria-hidden="true">
+    <div class="spinner"></div>
+    <p class="overlay-label">Processing image…</p>
+  </div>
+
+  <!-- 3-second image preview before puzzle starts -->
+  <div id="overlay-preview" class="overlay overlay--preview hidden" aria-hidden="true">
+    <div class="preview-box">
+      <div id="preview-image-bg"></div>
+      <span class="preview-chip">PREVIEW</span>
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       APP SHELL
+       ================================================ -->
+  <div id="app">
+
+    <!-- Header -->
+    <header class="app-header">
+      <h1 class="app-title">SLIDE<span class="accent-dot">.</span></h1>
+      <div class="stat-bar">
+        <div class="stat-cell">
+          <span class="stat-lbl">TIME</span>
+          <span class="stat-val" id="stat-timer">0:00</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-cell">
+          <span class="stat-lbl">MOVES</span>
+          <span class="stat-val" id="stat-moves">0</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-cell">
+          <span class="stat-lbl">BEST</span>
+          <span class="stat-val" id="stat-best">--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Difficulty selector -->
+    <div class="diff-row" role="group" aria-label="Difficulty">
+      <button class="diff-btn active" data-size="3" aria-pressed="true">3×3</button>
+      <button class="diff-btn"        data-size="4" aria-pressed="false">4×4</button>
+      <button class="diff-btn"        data-size="5" aria-pressed="false">5×5</button>
+    </div>
+
+    <!-- Puzzle container -->
+    <div id="puzzle-wrap">
+      <div id="puzzle-grid" role="grid" aria-label="Sliding puzzle"></div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="action-row">
+      <button id="btn-shuffle" class="btn btn--primary">
+        <!-- shuffle icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+          <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+        </svg>
+        Shuffle
+      </button>
+      <button id="btn-change-image" class="btn btn--ghost">
+        <!-- image icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Image
+      </button>
+    </div>
+
+  </div><!-- /#app -->
+
+
+  <!-- ================================================
+       IMAGE PICKER MODAL (bottom sheet)
+       ================================================ -->
+  <div id="modal-picker" class="modal hidden" role="dialog" aria-modal="true" aria-label="Choose image">
+    <div class="modal-backdrop" id="picker-backdrop"></div>
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title-row">
+        <h2 class="sheet-title">Choose Image</h2>
+        <button class="btn-icon" id="btn-close-picker" aria-label="Close">✕</button>
+      </div>
+      <div class="image-pick-grid" id="image-pick-grid">
+        <!-- Populated by JS -->
+      </div>
+      <label class="btn btn--outline btn--wide" for="file-input">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Upload from Device
+      </label>
+      <!-- Hidden file input — triggered by label above -->
+      <input type="file" id="file-input" accept="image/*" class="sr-only" tabindex="-1" />
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       CONFIRM IMAGE MODAL (bottom sheet)
+       ================================================ -->
+  <div id="modal-confirm" class="modal hidden" role="dialog" aria-modal="true" aria-label="Confirm image">
+    <div class="modal-backdrop" id="confirm-backdrop"></div>
+    <div class="modal-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title-row">
+        <h2 class="sheet-title">Use this image?</h2>
+      </div>
+      <div class="confirm-thumb-wrap">
+        <canvas id="confirm-canvas"></canvas>
+      </div>
+      <div class="sheet-btn-row">
+        <button id="btn-cancel-image" class="btn btn--ghost btn--half">Cancel</button>
+        <button id="btn-use-image"    class="btn btn--primary btn--half">Use Image</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       WIN MODAL (centered dialog)
+       ================================================ -->
+  <div id="modal-win" class="modal modal--center hidden" role="dialog" aria-modal="true" aria-label="Puzzle solved">
+    <div class="modal-backdrop"></div>
+    <div class="modal-sheet modal-sheet--dialog">
+      <p class="win-emoji" aria-hidden="true">🎉</p>
+      <h2 class="win-heading">Puzzle Solved!</h2>
+      <div class="win-stat-row">
+        <div class="win-stat-cell">
+          <span class="win-lbl">Time</span>
+          <span class="win-val" id="win-time">--</span>
+        </div>
+        <div class="win-stat-cell">
+          <span class="win-lbl">Moves</span>
+          <span class="win-val" id="win-moves">--</span>
+        </div>
+        <div class="win-stat-cell win-stat-cell--gold">
+          <span class="win-lbl">Best</span>
+          <span class="win-val" id="win-best">--</span>
+        </div>
+      </div>
+      <button id="btn-play-again" class="btn btn--primary btn--wide">Play Again</button>
+    </div>
+  </div>
+
+
+  <!-- Confetti canvas (above everything) -->
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

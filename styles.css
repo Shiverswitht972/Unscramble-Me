@@ -1,0 +1,708 @@
+/* ============================================================
+   SLIDE PUZZLE — styles.css
+   Dark-mode, mobile-first, Telegram Mini App
+   ============================================================ */
+
+/* ---- CSS CUSTOM PROPERTIES ---- */
+:root {
+  /* Palette */
+  --bg:         #0c0c11;
+  --surface:    #15151e;
+  --surface-2:  #1c1c28;
+  --surface-3:  #242434;
+  --border:     rgba(255, 255, 255, 0.07);
+  --border-2:   rgba(255, 255, 255, 0.12);
+  --accent:     #00e5ff;
+  --accent-dim: rgba(0, 229, 255, 0.12);
+  --gold:       #ffd700;
+  --danger:     #ff3d71;
+  --text:       #eeeef8;
+  --text-2:     #9090b0;
+  --text-3:     #55556a;
+
+  /* Telegram theme overrides (set via JS if available) */
+  --tg-bg:     var(--bg);
+  --tg-text:   var(--text);
+  --tg-accent: var(--accent);
+
+  /* Spacing / radius */
+  --r-sm: 8px;
+  --r:    14px;
+  --r-lg: 20px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow:    0 8px 32px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 16px 60px rgba(0, 0, 0, 0.7);
+
+  /* Tile transition */
+  --tile-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ---- RESET ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent double-tap zoom on mobile */
+  touch-action: manipulation;
+  user-select: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   APP LAYOUT
+   ============================================================ */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;     /* fallback */
+  padding: 12px 16px 20px;
+  gap: 12px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.accent-dot {
+  color: var(--accent);
+}
+
+/* Stat bar */
+.stat-bar {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 11px;
+  gap: 1px;
+}
+
+.stat-lbl {
+  font-family: 'Space Mono', monospace;
+  font-size: 7px;
+  font-weight: 400;
+  color: var(--text-3);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.stat-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  min-width: 3ch;
+  text-align: center;
+}
+
+.stat-sep {
+  width: 1px;
+  height: 26px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   DIFFICULTY SELECTOR
+   ============================================================ */
+.diff-row {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.diff-btn {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.1s;
+}
+
+.diff-btn.active {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.diff-btn:not(.active):active {
+  transform: scale(0.95);
+  opacity: 0.75;
+}
+
+/* ============================================================
+   PUZZLE AREA
+   ============================================================ */
+#puzzle-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0; /* allow flex shrink */
+}
+
+#puzzle-grid {
+  position: relative;
+  /* Size set via JS */
+  background: #06060a;     /* shows through as the "empty" tile slot */
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow), 0 0 0 2px var(--border);
+}
+
+/* ---- TILE ---- */
+.tile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* Transition only transform (GPU composited) */
+  transition: transform 0.13s var(--tile-ease);
+  will-change: transform;
+  cursor: pointer;
+  background-repeat: no-repeat;
+  /* Subtle inner border to visually separate tiles */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+  /* Tiny radius helps with the seam effect */
+  border-radius: 1px;
+  outline: none;
+}
+
+.tile:active {
+  filter: brightness(1.18);
+  z-index: 2;
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 3;
+}
+
+/* Disable transitions during instant repositioning (shuffle/init) */
+.tile.no-anim {
+  transition: none !important;
+}
+
+/* ============================================================
+   ACTION ROW
+   ============================================================ */
+.action-row {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 18px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  transition: transform 0.1s, opacity 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #000;
+  flex: 1;
+}
+
+.btn--ghost {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  flex: 1;
+}
+
+.btn--outline {
+  background: transparent;
+  color: var(--accent);
+  border-color: rgba(0, 229, 255, 0.35);
+}
+
+.btn--wide  { width: 100%; }
+.btn--half  { flex: 1; }
+
+/* Icon-only button (close ×) */
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px;
+  border-radius: var(--r-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-icon:active {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+/* Screen-reader only (hidden file input) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;   /* bottom-sheet default */
+  pointer-events: none;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* When modal is open, backdrop + sheet are interactive */
+.modal.open .modal-backdrop {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal.open {
+  pointer-events: all;
+}
+
+/* ---- BOTTOM SHEET ---- */
+.modal-sheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  background: var(--surface);
+  border-top: 1px solid var(--border-2);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 10px 16px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transform: translateY(100%);
+  transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal.open .modal-sheet {
+  transform: translateY(0);
+}
+
+/* ---- CENTERED DIALOG (win modal) ---- */
+.modal--center {
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-sheet--dialog {
+  width: 100%;
+  max-width: 320px;
+  border-radius: var(--r-lg);
+  border-top: none;
+  transform: scale(0.88) translateY(16px);
+  opacity: 0;
+  transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.28s ease;
+}
+
+.modal--center.open .modal-sheet--dialog {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+/* Sheet chrome */
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-2);
+  margin: 0 auto 4px;
+  flex-shrink: 0;
+}
+
+.sheet-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sheet-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sheet-btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+/* ============================================================
+   IMAGE PICKER GRID
+   ============================================================ */
+.image-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.image-thumb {
+  aspect-ratio: 1;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: var(--surface-2);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  transition: border-color 0.2s, transform 0.15s;
+  position: relative;
+}
+
+.image-thumb:active {
+  transform: scale(0.94);
+}
+
+.image-thumb img {
+  width: 100%;
+  flex: 1;
+  object-fit: cover;
+  display: block;
+}
+
+.image-thumb span {
+  font-size: 10px;
+  color: var(--text-2);
+  padding: 3px 4px 4px;
+  font-weight: 500;
+  text-align: center;
+  background: var(--surface-3);
+  width: 100%;
+}
+
+/* ============================================================
+   CONFIRM PREVIEW
+   ============================================================ */
+.confirm-thumb-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 4px;
+  overflow: hidden;
+}
+
+#confirm-canvas {
+  display: block;
+  border-radius: calc(var(--r-sm) - 2px);
+  max-width: 100%;
+}
+
+/* ============================================================
+   WIN MODAL CONTENT
+   ============================================================ */
+.win-emoji {
+  font-size: 52px;
+  text-align: center;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.3); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.win-heading {
+  font-family: 'Space Mono', monospace;
+  font-size: 21px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.win-stat-row {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+
+.win-stat-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 6px;
+  gap: 4px;
+}
+
+.win-stat-cell + .win-stat-cell {
+  border-left: 1px solid var(--border);
+}
+
+.win-stat-cell--gold .win-val {
+  color: var(--gold);
+}
+
+.win-lbl {
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  color: var(--text-3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.win-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ============================================================
+   OVERLAYS
+   ============================================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(6, 6, 10, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 46px;
+  height: 46px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.overlay-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  color: var(--text-3);
+  letter-spacing: 0.5px;
+}
+
+/* Preview overlay */
+.overlay--preview {
+  background: rgba(4, 4, 8, 0.92);
+}
+
+.preview-box {
+  position: relative;
+  width: min(88vw, 380px);
+  aspect-ratio: 1;
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-2);
+}
+
+#preview-image-bg {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  animation: zoomIn 0.5s ease both;
+}
+
+@keyframes zoomIn {
+  from { transform: scale(1.06); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.preview-chip {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.72);
+  color: var(--text-2);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-2);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.toast.hidden {
+  display: none;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   CONFETTI CANVAS
+   ============================================================ */
+#confetti-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  pointer-events: none;
+  display: none;
+}
+
+/* ============================================================
+   SCROLLBAR STYLING (modals)
+   ============================================================ */
+.modal-sheet::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modal-sheet::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-sheet::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 2px;
+}
